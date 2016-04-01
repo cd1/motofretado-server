@@ -1,21 +1,27 @@
 package main
 
 import (
+	"flag"
 	"net/http"
-	"os"
+	"strconv"
 
 	"github.com/Sirupsen/logrus"
 	"motorola.com/cdeives/motofretado/data"
 	"motorola.com/cdeives/motofretado/web"
 )
 
+var (
+	debug bool
+	port  int
+)
+
+func init() {
+	flag.BoolVar(&debug, "debug", false, "enable debug logs")
+	flag.IntVar(&port, "port", 8080, "the port to listen on")
+}
+
 func main() {
-	// reading environment variables
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	debug := (os.Getenv("DEBUG") == "TRUE")
+	flag.Parse()
 
 	if debug {
 		logrus.SetLevel(logrus.DebugLevel)
@@ -27,7 +33,7 @@ func main() {
 	logrus.WithFields(logrus.Fields{
 		"port": port,
 	}).Info("starting web server")
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	if err := http.ListenAndServe(":"+strconv.Itoa(port), mux); err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"port": port,
 		}).Fatal("error running web server")
