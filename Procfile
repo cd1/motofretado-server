@@ -1,1 +1,1 @@
-web: motofretado-server
+web: motofretado-server -port $PORT -debug
