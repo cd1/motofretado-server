@@ -1,0 +1,31 @@
+{
+	"ImportPath": "motorola.com/cdeives/motofretado",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v60",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.10.0",
+			"Rev": "4b6ea7319e214d98c938f12692336f7ca9348d6b"
+		},
+		{
+			"ImportPath": "github.com/justinas/alice",
+			"Rev": "003d4fd794fd5bbe6b77c3b596e1fd9955f6c77e"
+		},
+		{
+			"ImportPath": "golang.org/x/net/webdav",
+			"Rev": "c4bb2f7b3d65038072e1e637027388ba2379f1bf"
+		},
+		{
+			"ImportPath": "golang.org/x/net/webdav/internal/xml",
+			"Rev": "c4bb2f7b3d65038072e1e637027388ba2379f1bf"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "320cb01ddbbf0473674c2585f9b6e245721de355"
+		}
+	]
+}
