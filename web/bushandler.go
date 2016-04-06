@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/webdav"
@@ -194,61 +193,20 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if bus.ID != "" {
-		errorResponse(w, Error{
-			Status:  webdav.StatusUnprocessableEntity, // 422 Unprocessable Entity
-			Details: fmt.Sprintf("Bus ID [%v] cannot be updated", bus.ID),
-		})
-
-		return
-	}
-
-	if !bus.CreatedAt.IsZero() {
-		errorResponse(w, Error{
-			Status:  webdav.StatusUnprocessableEntity, // 422 Unprocessable Entity
-			Details: fmt.Sprintf("Bus create time [%v] cannot be updated", bus.CreatedAt),
-		})
-
-		return
-	}
-
-	now := time.Now()
-	if bus.UpdatedAt.IsZero() {
-		bus.UpdatedAt = now
-	} else if bus.UpdatedAt.After(now) {
-		errorResponse(w, Error{
-			Status:  webdav.StatusUnprocessableEntity, // 422 Unprocessable Entity
-			Details: fmt.Sprintf("Bus update time [%v] cannot be in the future", bus.UpdatedAt),
-		})
-
-		return
-	}
-
-	existingBus, err := h.DB.ReadBus(bus.ID)
-	if err != nil {
-		errorResponse(w, Error{
-			Status:  http.StatusInternalServerError, // 500 Internal Server Error
-			Details: err.Error(),
-		})
-
-		return
-	}
-
-	if bus.UpdatedAt.Before(existingBus.UpdatedAt) {
-		errorResponse(w, Error{
-			Status:  webdav.StatusUnprocessableEntity, // 422 Unprocessable Entity
-			Details: fmt.Sprintf("Bus update time [%v] cannot be before last update time [%v]", bus.UpdatedAt, existingBus.UpdatedAt),
-		})
-
-		return
-	}
-
 	updatedBus, err := h.DB.UpdateBus(id, bus)
 	if err != nil {
-		errorResponse(w, Error{
-			Status:  http.StatusInternalServerError, // 500 Internal Server Error
-			Details: err.Error(),
-		})
+		switch err.(type) {
+		case data.InvalidParameterError, data.MissingParameterError:
+			errorResponse(w, Error{
+				Status:  webdav.StatusUnprocessableEntity, // 422 Unprocessable Entity
+				Details: err.Error(),
+			})
+		default:
+			errorResponse(w, Error{
+				Status:  http.StatusInternalServerError, // 500 Internal Server Error
+				Details: err.Error(),
+			})
+		}
 
 		return
 	}

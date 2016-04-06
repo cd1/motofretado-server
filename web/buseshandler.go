@@ -114,10 +114,18 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request) {
 
 	createdBus, err := h.DB.CreateBus(bus)
 	if err != nil {
-		errorResponse(w, Error{
-			Status:  http.StatusInternalServerError,
-			Details: err.Error(),
-		})
+		switch err.(type) {
+		case data.InvalidParameterError, data.MissingParameterError:
+			errorResponse(w, Error{
+				Status:  webdav.StatusUnprocessableEntity, // 422 Unprocessable Entity
+				Details: err.Error(),
+			})
+		default:
+			errorResponse(w, Error{
+				Status:  http.StatusInternalServerError, // 500 Internal Server Error
+				Details: err.Error(),
+			})
+		}
 
 		return
 	}

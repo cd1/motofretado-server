@@ -11,11 +11,13 @@ import (
 )
 
 var (
+	dbURL string
 	debug bool
 	port  int
 )
 
 func init() {
+	flag.StringVar(&dbURL, "db", "", "the database URL")
 	flag.BoolVar(&debug, "debug", false, "enable debug logs")
 	flag.IntVar(&port, "port", 8080, "the port to listen on")
 }
@@ -27,7 +29,16 @@ func main() {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	db := data.NewMemDB()
+	db, err := data.NewPostgresDB(dbURL)
+	if err != nil {
+		logrus.Fatal("error opening a database connection")
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			logrus.WithError(err).Warn("could not close the database connection")
+		}
+	}()
+
 	mux := web.BuildMux(db)
 
 	logrus.WithFields(logrus.Fields{

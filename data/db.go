@@ -1,18 +1,6 @@
 package data
 
-import (
-	"errors"
-
-	"motorola.com/cdeives/motofretado/model"
-)
-
-// Common error values for database operations.
-var (
-	ErrFutureTime = errors.New("timestamp cannot be in the future")
-	ErrIDExists   = errors.New("ID already exists")
-	ErrIDNotFound = errors.New("ID not found")
-	ErrPastTime   = errors.New("timestamp cannot be in the past")
-)
+import "motorola.com/cdeives/motofretado/model"
 
 // DB is a common interface for persistance operations. This interface can be
 // implemented by in-memory databases, SQLite, MySQL, etc.
