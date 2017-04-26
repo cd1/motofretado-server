@@ -1,41 +1,46 @@
 {
 	"ImportPath": "motorola.com/cdeives/motofretado",
-	"GoVersion": "go1.6",
-	"GodepVersion": "v60",
+	"GoVersion": "go1.8",
+	"GodepVersion": "v79",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.10.0",
-			"Rev": "4b6ea7319e214d98c938f12692336f7ca9348d6b"
+			"Comment": "v0.11.4-2-g1deb2db",
+			"Rev": "1deb2db2a6fff8a35532079061b903c3a25eed52"
 		},
 		{
 			"ImportPath": "github.com/justinas/alice",
-			"Rev": "003d4fd794fd5bbe6b77c3b596e1fd9955f6c77e"
+			"Comment": "1.0.0-8-g43e429c",
+			"Rev": "43e429cd03e6faac34faf94153cfb7a5adb6b928"
 		},
 		{
 			"ImportPath": "github.com/lib/pq",
-			"Comment": "go1.0-cutoff-84-g3cd0097",
-			"Rev": "3cd0097429be7d611bb644ef85b42bfb102ceea4"
+			"Comment": "go1.0-cutoff-111-g80f8150",
+			"Rev": "80f8150043c80fb52dee6bc863a709cdac7ec8f8"
 		},
 		{
 			"ImportPath": "github.com/lib/pq/oid",
-			"Comment": "go1.0-cutoff-84-g3cd0097",
-			"Rev": "3cd0097429be7d611bb644ef85b42bfb102ceea4"
+			"Comment": "go1.0-cutoff-111-g80f8150",
+			"Rev": "80f8150043c80fb52dee6bc863a709cdac7ec8f8"
 		},
 		{
 			"ImportPath": "golang.org/x/net/webdav",
-			"Rev": "c4bb2f7b3d65038072e1e637027388ba2379f1bf"
+			"Rev": "8fd7f25955530b92e73e9e1932a41b522b22ccd9"
 		},
 		{
 			"ImportPath": "golang.org/x/net/webdav/internal/xml",
-			"Rev": "c4bb2f7b3d65038072e1e637027388ba2379f1bf"
+			"Rev": "8fd7f25955530b92e73e9e1932a41b522b22ccd9"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
 			"Rev": "320cb01ddbbf0473674c2585f9b6e245721de355"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "8fd7f25955530b92e73e9e1932a41b522b22ccd9"
 		}
 	]
 }
