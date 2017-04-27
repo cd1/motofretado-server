@@ -6,12 +6,11 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/julienschmidt/httprouter"
 	"golang.org/x/net/webdav"
 	"motorola.com/cdeives/motofretado/data"
 	"motorola.com/cdeives/motofretado/model"
 )
-
-const busesHandlerAllowedMethods = "GET, HEAD, OPTIONS, POST"
 
 // BusesHandler handles the HTTP requests on the bus collection. It is
 // responsible for listing all the buses and creating new ones.
@@ -19,20 +18,7 @@ type BusesHandler struct {
 	DB data.DB
 }
 
-func (h BusesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-	case "GET", "HEAD":
-		h.get(w, req)
-	case "OPTIONS":
-		h.options(w)
-	case "POST":
-		h.post(w, req)
-	default:
-		methodNotAllowed(w, req.Method, busesHandlerAllowedMethods)
-	}
-}
-
-func (h BusesHandler) get(w http.ResponseWriter, req *http.Request) {
+func (h BusesHandler) get(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	if req.Header.Get("Accept") != "application/json" {
 		notAcceptable(w)
 
@@ -55,12 +41,7 @@ func (h BusesHandler) get(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (BusesHandler) options(w http.ResponseWriter) {
-	w.Header().Set("Allow", busesHandlerAllowedMethods)
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h BusesHandler) post(w http.ResponseWriter, req *http.Request) {
+func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	if req.Header.Get("Accept") != "application/json" {
 		notAcceptable(w)
 

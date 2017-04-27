@@ -4,15 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/julienschmidt/httprouter"
 	"golang.org/x/net/webdav"
 	"motorola.com/cdeives/motofretado/data"
 	"motorola.com/cdeives/motofretado/model"
 )
-
-const busHandlerAllowedMethods = "GET, HEAD, OPTIONS, PATCH"
 
 // BusHandler handles the HTTP requests on the bus resource. It is responsible
 // for listing detailed information, updating and deleting individual buses.
@@ -20,30 +18,15 @@ type BusHandler struct {
 	DB data.DB
 }
 
-func (h BusHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-	case "DELETE":
-		h.delete(w, req)
-	case "GET", "HEAD":
-		h.get(w, req)
-	case "OPTIONS":
-		h.options(w)
-	case "PATCH":
-		h.patch(w, req)
-	default:
-		methodNotAllowed(w, req.Method, busHandlerAllowedMethods) // 405 Method Not Allowed
-	}
-}
-
-func (h BusHandler) delete(w http.ResponseWriter, req *http.Request) {
+func (h BusHandler) delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	if req.Header.Get("Accept") != "application/json" {
 		notAcceptable(w) // 406 Not Acceptable
 
 		return
 	}
 
-	id := strings.TrimPrefix(req.URL.Path, "/bus/")
-	if id == "" {
+	id := params.ByName("id")
+	if len(id) == 0 {
 		errorResponse(w, Error{
 			Status:  http.StatusBadRequest, // 400 Bad Request
 			Details: "Empty bus ID",
@@ -83,15 +66,15 @@ func (h BusHandler) delete(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent) // 204 No Content
 }
 
-func (h BusHandler) get(w http.ResponseWriter, req *http.Request) {
+func (h BusHandler) get(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	if req.Header.Get("Accept") != "application/json" {
 		notAcceptable(w) // 406 Not Acceptable
 
 		return
 	}
 
-	id := strings.TrimPrefix(req.URL.Path, "/bus/")
-	if id == "" {
+	id := params.ByName("id")
+	if len(id) == 0 {
 		errorResponse(w, Error{
 			Status:  http.StatusBadRequest, // 400 Bad Request
 			Details: "Empty bus ID",
@@ -135,12 +118,7 @@ func (h BusHandler) get(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (BusHandler) options(w http.ResponseWriter) {
-	w.Header().Set("Allow", busHandlerAllowedMethods)
-	w.WriteHeader(http.StatusNoContent) // 204 No Content
-}
-
-func (h BusHandler) patch(w http.ResponseWriter, req *http.Request) {
+func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	if req.Header.Get("Accept") != "application/json" {
 		notAcceptable(w) // 406 Not Acceptable
 
@@ -153,8 +131,8 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id := strings.TrimPrefix(req.URL.Path, "/bus/")
-	if id == "" {
+	id := params.ByName("id")
+	if len(id) == 0 {
 		errorResponse(w, Error{
 			Status:  http.StatusBadRequest, // 400 Bad Request
 			Details: "Empty bus ID",

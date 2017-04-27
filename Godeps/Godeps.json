@@ -12,6 +12,11 @@
 			"Rev": "1deb2db2a6fff8a35532079061b903c3a25eed52"
 		},
 		{
+			"ImportPath": "github.com/julienschmidt/httprouter",
+			"Comment": "v1.1-34-gd8ff598",
+			"Rev": "d8ff598a019f2c7bad0980917a588193cf26666e"
+		},
+		{
 			"ImportPath": "github.com/justinas/alice",
 			"Comment": "1.0.0-8-g43e429c",
 			"Rev": "43e429cd03e6faac34faf94153cfb7a5adb6b928"

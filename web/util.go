@@ -1,17 +1,8 @@
 package web
 
 import (
-	"fmt"
 	"net/http"
 )
-
-func methodNotAllowed(w http.ResponseWriter, method string, allowedMethods string) {
-	w.Header().Set("Allow", allowedMethods)
-	errorResponse(w, Error{
-		Status:  http.StatusMethodNotAllowed, // 405 Method Not Allowed
-		Details: fmt.Sprintf("HTTP method \"%v\" isn't allowed for this resource", method),
-	})
-}
 
 func notAcceptable(w http.ResponseWriter) {
 	errorResponse(w, Error{
