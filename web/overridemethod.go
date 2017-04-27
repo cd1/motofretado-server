@@ -9,17 +9,15 @@ import (
 // OverrideMethodWrapper changes req.Method to the value of the header
 // X-HTTP-Method-Override if that header exists and the original request
 // is POST.
-func OverrideMethodWrapper(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if req.Method == "POST" {
-			if newMethod := req.Header.Get("X-HTTP-Method-Override"); newMethod != "" {
-				req.Method = newMethod
-				logrus.WithFields(logrus.Fields{
-					"method": newMethod,
-				}).Debug("HTTP method overriden")
-			}
+func OverrideMethodHandler(w http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
+	if req.Method == http.MethodPost {
+		if newMethod := req.Header.Get("X-HTTP-Method-Override"); len(newMethod) > 0 {
+			req.Method = newMethod
+			logrus.WithFields(logrus.Fields{
+				"method": newMethod,
+			}).Debug("HTTP method overridden")
 		}
+	}
 
-		h.ServeHTTP(w, req)
-	})
+	next(w, req)
 }

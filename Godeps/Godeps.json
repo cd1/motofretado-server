@@ -27,6 +27,15 @@
 			"Rev": "80f8150043c80fb52dee6bc863a709cdac7ec8f8"
 		},
 		{
+			"ImportPath": "github.com/urfave/negroni",
+			"Comment": "v0.2.0-104-gc0db5fe",
+			"Rev": "c0db5feaa33826cd5117930c8f4ee5c0f565eec6"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "8fd7f25955530b92e73e9e1932a41b522b22ccd9"
+		},
+		{
 			"ImportPath": "golang.org/x/net/webdav",
 			"Rev": "8fd7f25955530b92e73e9e1932a41b522b22ccd9"
 		},
@@ -37,10 +46,6 @@
 		{
 			"ImportPath": "golang.org/x/sys/unix",
 			"Rev": "320cb01ddbbf0473674c2585f9b6e245721de355"
-		},
-		{
-			"ImportPath": "golang.org/x/net/context",
-			"Rev": "8fd7f25955530b92e73e9e1932a41b522b22ccd9"
 		}
 	]
 }
