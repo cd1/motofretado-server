@@ -7,7 +7,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
-	"golang.org/x/net/webdav"
 	"motorola.com/cdeives/motofretado/data"
 	"motorola.com/cdeives/motofretado/model"
 )
@@ -67,7 +66,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 
 	if bus.ID == "" {
 		errorResponse(w, Error{
-			Status:  webdav.StatusUnprocessableEntity,
+			Status:  http.StatusUnprocessableEntity,
 			Details: "Missing bus ID",
 		})
 
@@ -98,7 +97,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 		switch err.(type) {
 		case data.InvalidParameterError, data.MissingParameterError:
 			errorResponse(w, Error{
-				Status:  webdav.StatusUnprocessableEntity, // 422 Unprocessable Entity
+				Status:  http.StatusUnprocessableEntity, // 422 Unprocessable Entity
 				Details: err.Error(),
 			})
 		default:

@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
-	"golang.org/x/net/webdav"
 )
 
 // Error represents an HTTP error in JSON. The status code should be a valid
@@ -17,16 +16,8 @@ type Error struct {
 }
 
 func errorResponse(w http.ResponseWriter, e Error) {
-	var statusText string
-
-	if t := http.StatusText(e.Status); t != "" {
-		statusText = t
-	} else if t := webdav.StatusText(e.Status); t != "" {
-		statusText = t
-	}
-
 	logrus.WithFields(logrus.Fields{
-		"status":  fmt.Sprintf("%v %v", e.Status, statusText),
+		"status":  fmt.Sprintf("%v %v", e.Status, http.StatusText(e.Status)),
 		"details": e.Details,
 	}).Warn("HTTP error")
 	w.Header().Set("Content-Type", "application/json")

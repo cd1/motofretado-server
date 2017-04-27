@@ -7,7 +7,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
-	"golang.org/x/net/webdav"
 	"motorola.com/cdeives/motofretado/data"
 	"motorola.com/cdeives/motofretado/model"
 )
@@ -176,7 +175,7 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 		switch err.(type) {
 		case data.InvalidParameterError, data.MissingParameterError:
 			errorResponse(w, Error{
-				Status:  webdav.StatusUnprocessableEntity, // 422 Unprocessable Entity
+				Status:  http.StatusUnprocessableEntity, // 422 Unprocessable Entity
 				Details: err.Error(),
 			})
 		default:
