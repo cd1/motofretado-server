@@ -46,6 +46,9 @@ func BuildMux(db data.DB) http.Handler {
 	n.UseFunc(func(w http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
 		handlers.HTTPMethodOverrideHandler(next).ServeHTTP(w, req)
 	})
+	n.UseFunc(func(w http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
+		handlers.CompressHandler(next).ServeHTTP(w, req)
+	})
 	n.UseHandler(router)
 
 	return n
