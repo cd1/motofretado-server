@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/gorilla/handlers"
 	"github.com/julienschmidt/httprouter"
 	"github.com/urfave/negroni"
 	"motorola.com/cdeives/motofretado/data"
@@ -38,8 +39,13 @@ func BuildMux(db data.DB) http.Handler {
 	router.NotFound = http.HandlerFunc(notFound)
 	router.PanicHandler = panicRecovery
 
-	n := negroni.New(negroni.NewLogger())
-	n.UseFunc(OverrideMethodHandler)
+	n := negroni.New()
+	n.UseFunc(func(w http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
+		handlers.LoggingHandler(logOutput, next).ServeHTTP(w, req)
+	})
+	n.UseFunc(func(w http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
+		handlers.HTTPMethodOverrideHandler(next).ServeHTTP(w, req)
+	})
 	n.UseHandler(router)
 
 	return n
