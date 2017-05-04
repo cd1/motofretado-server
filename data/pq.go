@@ -282,6 +282,8 @@ func (db PostgresDB) UpdateBus(id string, bus model.Bus) (model.Bus, error) {
 		return model.Bus{}, err
 	}
 
+	bus.CreatedAt = existingBus.CreatedAt
+
 	now := time.Now()
 	if bus.UpdatedAt.IsZero() {
 		bus.UpdatedAt = now
