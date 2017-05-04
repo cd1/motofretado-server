@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
 	"motorola.com/cdeives/motofretado/data"
-	"motorola.com/cdeives/motofretado/model"
+	"motorola.com/cdeives/motofretado/web/jsonapi"
 )
 
 // BusesHandler handles the HTTP requests on the bus collection. It is
@@ -18,7 +19,7 @@ type BusesHandler struct {
 }
 
 func (h BusesHandler) get(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	if req.Header.Get("Accept") != "application/json" {
+	if req.Header.Get("Accept") != jsonapi.ContentType {
 		notAcceptable(w)
 
 		return
@@ -26,48 +27,96 @@ func (h BusesHandler) get(w http.ResponseWriter, req *http.Request, params httpr
 
 	buses, err := h.DB.ReadAllBuses()
 	if err != nil {
-		errorResponse(w, Error{
-			Status:  http.StatusInternalServerError,
-			Details: err.Error(),
+		errorResponse(w, jsonapi.ErrorData{
+			Status: strconv.Itoa(http.StatusInternalServerError),
+			Title:  "Unexpected error",
+			Detail: err.Error(),
 		})
 
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(buses); err != nil {
+	busesDoc := jsonapi.ToBusesDocument(buses)
+	scheme := requestScheme(req)
+	for i, b := range busesDoc.Data {
+		busesDoc.Data[i].Links = &jsonapi.Links{
+			Self: fmt.Sprintf("%v://%v/bus/%v", scheme, req.Host, b.ID),
+		}
+	}
+
+	w.Header().Set("Content-Type", jsonapi.ContentType)
+	if err := json.NewEncoder(w).Encode(busesDoc); err != nil {
 		logrus.WithError(err).Error("could not encode buses to JSON")
 	}
 }
 
 func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	if req.Header.Get("Accept") != "application/json" {
+	if req.Header.Get("Accept") != jsonapi.ContentType {
 		notAcceptable(w)
 
 		return
 	}
 
-	if req.Header.Get("Content-Type") != "application/json" {
+	if req.Header.Get("Content-Type") != jsonapi.ContentType {
 		unsupportedMediaType(w)
 
 		return
 	}
 
-	var bus model.Bus
+	var busDoc jsonapi.BusDocument
 
-	if err := json.NewDecoder(req.Body).Decode(&bus); err != nil {
-		errorResponse(w, Error{
-			Status:  http.StatusBadRequest,
-			Details: err.Error(),
+	if err := json.NewDecoder(req.Body).Decode(&busDoc); err != nil {
+		errorResponse(w, jsonapi.ErrorData{
+			Status: strconv.Itoa(http.StatusBadRequest),
+			Title:  "Invalid JSON format",
+			Detail: err.Error(),
 		})
 
 		return
 	}
 
+	bus, err := jsonapi.FromBusDocument(busDoc)
+	if err != nil {
+		switch err.(type) {
+		case jsonapi.UnsupportedVersionError:
+			errorResponse(w, jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusBadRequest),
+				Title:  "Unsupported JSONAPI version",
+				Detail: err.Error(),
+				Source: &jsonapi.ErrorSource{
+					Pointer: "/jsonapi/version",
+				},
+			})
+		case jsonapi.InvalidTypeError:
+			errorResponse(w, jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusConflict),
+				Title:  "Invalid JSONAPI data type",
+				Detail: err.Error(),
+				Source: &jsonapi.ErrorSource{
+					Pointer: "/data/type",
+				},
+			})
+		default:
+			errorResponse(w, jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusBadRequest),
+				Title:  "Invalid JSONAPI data",
+				Detail: err.Error(),
+				Source: &jsonapi.ErrorSource{
+					Pointer: "/data",
+				},
+			})
+		}
+
+		return
+	}
+
 	if bus.ID == "" {
-		errorResponse(w, Error{
-			Status:  http.StatusUnprocessableEntity,
-			Details: "Missing bus ID",
+		errorResponse(w, jsonapi.ErrorData{
+			Status: strconv.Itoa(http.StatusUnprocessableEntity),
+			Title:  "Missing bus ID",
+			Source: &jsonapi.ErrorSource{
+				Pointer: "/data/id",
+			},
 		})
 
 		return
@@ -75,18 +124,23 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 
 	exists, err := h.DB.ExistsBus(bus.ID)
 	if err != nil {
-		errorResponse(w, Error{
-			Status:  http.StatusInternalServerError,
-			Details: err.Error(),
+		errorResponse(w, jsonapi.ErrorData{
+			Status: strconv.Itoa(http.StatusInternalServerError),
+			Title:  "Unexpected error",
+			Detail: err.Error(),
 		})
 
 		return
 	}
 
 	if exists {
-		errorResponse(w, Error{
-			Status:  http.StatusConflict,
-			Details: fmt.Sprintf("Bus \"%v\" already exists", bus.ID),
+		errorResponse(w, jsonapi.ErrorData{
+			Status: strconv.Itoa(http.StatusConflict),
+			Title:  "Existing bus ID",
+			Detail: fmt.Sprintf("Bus \"%v\" already exists", bus.ID),
+			Source: &jsonapi.ErrorSource{
+				Pointer: "/data/id",
+			},
 		})
 
 		return
@@ -95,25 +149,52 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 	createdBus, err := h.DB.CreateBus(bus)
 	if err != nil {
 		switch err.(type) {
-		case data.InvalidParameterError, data.MissingParameterError:
-			errorResponse(w, Error{
-				Status:  http.StatusUnprocessableEntity, // 422 Unprocessable Entity
-				Details: err.Error(),
+		case data.InvalidParameterError:
+			errorResponse(w, jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusUnprocessableEntity), // 422 Unprocessable Entity
+				Title:  "Invalid bus field",
+				Detail: err.Error(),
+				Source: &jsonapi.ErrorSource{
+					Pointer: "/data/attributes/" + err.(data.InvalidParameterError).Name,
+				},
 			})
+		case data.MissingParameterError:
+			jsonapiErr := jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusUnprocessableEntity), // 422 Unprocessable Entity
+				Title:  "Missing bus field",
+				Detail: err.Error(),
+				Source: &jsonapi.ErrorSource{},
+			}
+
+			missingParameterName := err.(data.MissingParameterError).Name
+			if missingParameterName == "id" {
+				jsonapiErr.Source.Pointer = "/data/id"
+			} else {
+				jsonapiErr.Source.Pointer = "/data/attributes/" + missingParameterName
+			}
+
+			errorResponse(w, jsonapiErr)
 		default:
-			errorResponse(w, Error{
-				Status:  http.StatusInternalServerError, // 500 Internal Server Error
-				Details: err.Error(),
+			errorResponse(w, jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error
+				Title:  "Unexpected error",
+				Detail: err.Error(),
 			})
 		}
 
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Location", "/bus/"+createdBus.ID)
+	createdBusDoc := jsonapi.ToBusDocument(createdBus)
+	selfURL := fmt.Sprintf("%v://%v/bus/%v", requestScheme(req), req.Host, createdBus.ID)
+	createdBusDoc.Data.Links = &jsonapi.Links{
+		Self: selfURL,
+	}
+
+	w.Header().Set("Content-Type", jsonapi.ContentType)
+	w.Header().Set("Location", selfURL)
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(createdBus); err != nil {
+	if err := json.NewEncoder(w).Encode(createdBusDoc); err != nil {
 		logrus.WithError(err).Error("could not encode bus to JSON")
 	}
 }

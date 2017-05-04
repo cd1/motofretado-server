@@ -257,12 +257,15 @@ func (db PostgresDB) UpdateBus(id string, bus model.Bus) (model.Bus, error) {
 		return model.Bus{}, err
 	}
 
-	if bus.ID != "" {
+	if bus.ID != id {
 		err := InvalidParameterError{
 			Name:  "id",
 			Value: bus.ID,
 		}
-		logrus.WithError(err).Error("cannot specify ID when updating bus")
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"id":      id,
+			"data_id": bus.ID,
+		}).Error("specified ID doesn't match data ID")
 		return model.Bus{}, err
 	}
 

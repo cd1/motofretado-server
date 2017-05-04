@@ -1,13 +1,20 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
+	"os"
+	"runtime/debug"
+	"strconv"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
 	"github.com/urfave/negroni"
 	"motorola.com/cdeives/motofretado/data"
+	"motorola.com/cdeives/motofretado/web/jsonapi"
 )
+
+var logOutput = os.Stderr
 
 // BuildMux builds the HTTP mux for the web server. It is responsible for
 // creating and chaining all available HTTP handlers.
@@ -27,9 +34,40 @@ func BuildMux(db data.DB) http.Handler {
 	router.PATCH("/bus/:id", bus.patch)
 	router.DELETE("/bus/:id", bus.delete)
 
-	n := negroni.Classic()
+	router.MethodNotAllowed = http.HandlerFunc(methodNotAllowed)
+	router.NotFound = http.HandlerFunc(notFound)
+	router.PanicHandler = panicRecovery
+
+	n := negroni.New(negroni.NewLogger())
 	n.UseFunc(OverrideMethodHandler)
 	n.UseHandler(router)
 
 	return n
+}
+
+func methodNotAllowed(w http.ResponseWriter, req *http.Request) {
+	errorResponse(w, jsonapi.ErrorData{
+		Status: strconv.Itoa(http.StatusMethodNotAllowed),
+		Title:  "HTTP method not allowed",
+		Detail: req.Method,
+	})
+}
+
+func notFound(w http.ResponseWriter, req *http.Request) {
+	errorResponse(w, jsonapi.ErrorData{
+		Status: strconv.Itoa(http.StatusNotFound),
+		Title:  "URL not found",
+		Detail: req.URL.Path,
+	})
+}
+
+func panicRecovery(w http.ResponseWriter, _ *http.Request, value interface{}) {
+	stackTrace := debug.Stack()
+	fmt.Fprintf(logOutput, "%s", stackTrace)
+
+	errorResponse(w, jsonapi.ErrorData{
+		Status: strconv.Itoa(http.StatusInternalServerError),
+		Title:  "Unrecoverable error",
+		Detail: fmt.Sprintf("PANIC: %s", value),
+	})
 }
