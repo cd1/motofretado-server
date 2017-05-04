@@ -18,12 +18,6 @@ type BusHandler struct {
 }
 
 func (h BusHandler) delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	if req.Header.Get("Accept") != "application/json" {
-		notAcceptable(w) // 406 Not Acceptable
-
-		return
-	}
-
 	id := params.ByName("id")
 	if len(id) == 0 {
 		errorResponse(w, Error{
