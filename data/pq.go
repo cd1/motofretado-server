@@ -2,132 +2,104 @@ package data
 
 import (
 	"database/sql"
-	"time"
+	"errors"
 
 	"github.com/Sirupsen/logrus"
-	_ "github.com/lib/pq" // database/sql driver
+	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"motorola.com/cdeives/motofretado/model"
 )
 
-// PostgresDB is a connection to a PostgreSQL database. To create a new instance
-// of it, use NewPostgresDB.
-type PostgresDB struct {
-	conn *sql.DB
+type postgresSource struct {
+	db            *sqlx.DB
+	insertStmt    *sqlx.Stmt
+	selectAllStmt *sqlx.Stmt
+	selectStmt    *sqlx.Stmt
+	updateStmt    *sqlx.Stmt
+	deleteStmt    *sqlx.Stmt
 }
 
-// NewPostgresDB creates a new connection to a PostgreSQL database.
+// NewPostgresRepository creates a new connection to a PostgreSQL database.
 // The connection URL is the same one used by the command "psql". All tables are
 // created during this function (if needed). After using the connection, the
 // user must call Close.
-func NewPostgresDB(url string) (PostgresDB, error) {
+func NewPostgresRepository(url string) (*Repository, error) {
 	logrus.WithFields(logrus.Fields{
 		"url": url,
 	}).Debug("opening connection to Postgres")
-	conn, err := sql.Open("postgres", url)
+	db, err := sqlx.Connect("postgres", url)
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"url": url,
 		}).Error("could not open a Postgres connection")
-		return PostgresDB{}, err
+		return nil, err
 	}
 
-	if err = conn.Ping(); err != nil {
-		logrus.WithError(err).Error("error pinging the Postgres database connection")
-		return PostgresDB{}, err
-	}
-
-	_, err = conn.Exec(`CREATE TABLE IF NOT EXISTS buses (
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS buses (
 			id TEXT PRIMARY KEY,
 			latitude FLOAT8 NOT NULL,
 			longitude FLOAT8 NOT NULL,
-			updated_at timestamp NOT NULL,
-			created_at timestamp NOT NULL
+			updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+			created_at TIMESTAMP WITH TIME ZONE NOT NULL
 		)`)
 	if err != nil {
 		logrus.WithError(err).Error("error creating the table \"buses\"")
-		return PostgresDB{}, err
+		return nil, err
 	}
 
-	db := PostgresDB{conn: conn}
-
-	return db, nil
-}
-
-// Close closes the connection to the database.
-func (db PostgresDB) Close() error {
-	logrus.Debug("closing connection to Postgres")
-	return db.conn.Close()
-}
-
-// CreateBus creates a new bus in the database. It returns the created bus with
-// the auto generated values.
-func (db PostgresDB) CreateBus(bus model.Bus) (model.Bus, error) {
-	logrus.WithFields(logrus.Fields{
-		"id":         bus.ID,
-		"latitude":   bus.Latitude,
-		"longitude":  bus.Longitude,
-		"updated_at": bus.UpdatedAt,
-		"created_at": bus.CreatedAt,
-	}).Debug("creating bus")
-	if bus.ID == "" {
-		err := MissingParameterError{"id"}
-		logrus.WithError(err).Error("missing bus ID")
-		return model.Bus{}, err
-	}
-
-	if !bus.UpdatedAt.IsZero() {
-		err := InvalidParameterError{
-			Name:  "updated_at",
-			Value: bus.UpdatedAt,
-		}
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"updated_at": bus.UpdatedAt,
-		}).Error("cannot specify update time when creating bus")
-		return model.Bus{}, err
-	}
-
-	if !bus.CreatedAt.IsZero() {
-		err := InvalidParameterError{
-			Name:  "created_at",
-			Value: bus.CreatedAt,
-		}
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"created_at": bus.CreatedAt,
-		}).Error("cannot specify create time when creating bus")
-		return model.Bus{}, err
-	}
-
-	now := time.Now()
-	bus.UpdatedAt = now
-	bus.CreatedAt = now
-
-	res, err := db.conn.Exec("INSERT INTO buses (id, latitude, longitude, updated_at, created_at) VALUES ($1, $2, $3, $4, $5)",
-		bus.ID, bus.Latitude, bus.Longitude, bus.UpdatedAt, bus.CreatedAt)
+	src := postgresSource{db: db}
+	src.insertStmt, err = db.Preparex(`INSERT INTO buses (id, latitude, longitude, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)`)
 	if err != nil {
+		return nil, err
+	}
+	src.selectAllStmt, err = db.Preparex(`SELECT id, latitude, longitude, created_at, updated_at FROM buses ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	src.selectStmt, err = db.Preparex(`SELECT latitude, longitude, created_at, updated_at FROM buses WHERE id = $1`)
+	if err != nil {
+		return nil, err
+	}
+	src.updateStmt, err = db.Preparex(`UPDATE buses SET latitude = $2, longitude = $3, updated_at = $4 WHERE id = $1`)
+	if err != nil {
+		return nil, err
+	}
+	src.deleteStmt, err = db.Preparex(`DELETE FROM buses WHERE id = $1`)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Repository{src: src}, nil
+}
+
+func (src postgresSource) CreateBus(bus model.Bus) error {
+	res, err := src.insertStmt.Exec(bus.ID, bus.Latitude, bus.Longitude, bus.CreatedAt, bus.UpdatedAt)
+	if err != nil {
+		if err.(*pq.Error).Code == "23505" { // unique_violation
+			return DuplicateError{bus.ID}
+		}
+
 		logrus.WithError(err).Error("error creating bus")
-		return model.Bus{}, err
+		return err
 	}
 
 	nRows, err := res.RowsAffected()
 	if err != nil {
-		logrus.WithError(err).Warn("could not get number of affected rows")
+		logrus.WithError(err).Error("could not get number of affected rows")
+		return err
 	}
-	if expected := int64(1); nRows != expected {
+	if nRows != 1 {
 		logrus.WithFields(logrus.Fields{
-			"actual_rows":   nRows,
-			"expected_rows": expected,
-		}).Warn("unexpected number of affected rows")
+			"affected_rows": nRows,
+		}).Error("unexpected number of rows were inserted")
+		return errors.New("xxx")
 	}
 
-	return bus, nil
+	return nil
 }
 
-// DeleteBus deletes a bus from the database.
-func (db PostgresDB) DeleteBus(id string) error {
-	logrus.WithFields(logrus.Fields{
-		"id": id,
-	}).Debug("deleting bus")
-	res, err := db.conn.Exec("DELETE FROM buses WHERE id = $1", id)
+func (src postgresSource) DeleteBus(id string) error {
+	res, err := src.deleteStmt.Exec(id)
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"id": id,
@@ -137,206 +109,102 @@ func (db PostgresDB) DeleteBus(id string) error {
 
 	nRows, err := res.RowsAffected()
 	if err != nil {
-		logrus.WithError(err).Warn("could not get number of affected rows")
+		logrus.WithError(err).Error("could not get number of affected rows")
+		return err
 	}
-	if expected := int64(1); nRows != expected {
+	if nRows == 0 {
+		logrus.Info("no rows have been deleted")
+		return ErrNoSuchRow
+	}
+	if nRows > 1 {
 		logrus.WithFields(logrus.Fields{
-			"actual_rows":   nRows,
-			"expected_rows": expected,
-		}).Warn("unexpected number of affected rows")
+			"affected_rows": nRows,
+		}).Error("more rows than expected were deleted")
+		return errors.New("xxx")
 	}
 
 	return nil
 }
 
-// ExistsBus checks if a bus exists in the database.
-func (db PostgresDB) ExistsBus(id string) (bool, error) {
-	logrus.WithFields(logrus.Fields{
-		"id": id,
-	}).Debug("checking if bus exists")
+func (src postgresSource) ReadAllBuses() ([]model.Bus, error) {
+	var buses []Bus
 
-	var exists bool
-
-	if err := db.conn.QueryRow("SELECT EXISTS(SELECT 1 FROM buses WHERE id = $1)", id).Scan(&exists); err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"id": id,
-		}).Error("error checking if bus exists")
-		return false, err
-	}
-
-	return exists, nil
-}
-
-// ReadAllBuses returns all buses from the database.
-func (db PostgresDB) ReadAllBuses() ([]model.Bus, error) {
-	logrus.Debug("reading all buses")
-	rows, err := db.conn.Query("SELECT id, latitude, longitude, updated_at, created_at FROM buses")
-	if err != nil {
-		logrus.WithError(err).Error("error reading all buses")
-		return nil, err
-	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			logrus.WithError(err).Warn("could not close query rows correctly")
-		}
-	}()
-
-	var buses []model.Bus
-
-	for rows.Next() {
-		var id string
-		var latitude, longitude float64
-		var updatedAt, createdAt time.Time
-
-		if err = rows.Scan(&id, &latitude, &longitude, &updatedAt, &createdAt); err != nil {
-			logrus.WithError(err).Error("error reading the values of one of the buses")
-			return nil, err
-		}
-
-		bus := model.Bus{
-			ID:        id,
-			Latitude:  latitude,
-			Longitude: longitude,
-			UpdatedAt: updatedAt,
-			CreatedAt: createdAt,
-		}
-
-		buses = append(buses, bus)
-	}
-	if err = rows.Err(); err != nil {
-		logrus.WithError(err).Error("error iterating through all buses")
+	if err := src.selectAllStmt.Select(&buses); err != nil {
 		return nil, err
 	}
 
 	return buses, nil
 }
 
-// ReadBus returns a specific bus from the database based on its ID. If it
-// doesn't exist, an error (sql.ErrNoRows) will be returned.
-func (db PostgresDB) ReadBus(id string) (model.Bus, error) {
-	logrus.WithFields(logrus.Fields{
-		"id": id,
-	}).Debug("reading bus")
+func (src postgresSource) ReadBus(id string) (model.Bus, error) {
+	bus := model.Bus{ID: id}
 
-	var latitude, longitude float64
-	var updatedAt, createdAt time.Time
+	if err := src.selectStmt.Get(&bus, id); err != nil {
+		if err == sql.ErrNoRows {
+			return model.Bus{}, ErrNoSuchRow
+		}
 
-	err := db.conn.QueryRow("SELECT latitude, longitude, updated_at, created_at FROM buses WHERE id = $1", id).
-		Scan(&latitude, &longitude, &updatedAt, &createdAt)
-	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"id": id,
 		}).Error("error reading bus")
 		return model.Bus{}, err
 	}
 
-	bus := model.Bus{
-		ID:        id,
-		Latitude:  latitude,
-		Longitude: longitude,
-		UpdatedAt: updatedAt,
-		CreatedAt: createdAt,
-	}
-
 	return bus, nil
 }
 
-// UpdateBus updates a bus in the database based on its ID. It returns the
-// updated bus with its final values.
-func (db PostgresDB) UpdateBus(id string, bus model.Bus) (model.Bus, error) {
-	logrus.WithFields(logrus.Fields{
-		"id":         bus.ID,
-		"latitude":   bus.Latitude,
-		"longitude":  bus.Longitude,
-		"updated_at": bus.UpdatedAt,
-		"created_at": bus.CreatedAt,
-	}).Debug("updating bus data")
-	if id == "" {
-		err := MissingParameterError{"id"}
-		logrus.WithError(err).Error("missing bus ID")
-		return model.Bus{}, err
-	}
-
-	if bus.ID != id {
-		err := InvalidParameterError{
-			Name:  "id",
-			Value: bus.ID,
-		}
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"id":      id,
-			"data_id": bus.ID,
-		}).Error("specified ID doesn't match data ID")
-		return model.Bus{}, err
-	}
-
-	if !bus.CreatedAt.IsZero() {
-		err := InvalidParameterError{
-			Name:  "created_at",
-			Value: bus.CreatedAt,
-		}
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"created_at": bus.CreatedAt,
-		}).Error("cannot specify create time when updating bus")
-		return model.Bus{}, err
-	}
-
-	existingBus, err := db.ReadBus(id)
-	if err != nil {
-		return model.Bus{}, err
-	}
-
-	bus.CreatedAt = existingBus.CreatedAt
-
-	now := time.Now()
-	if bus.UpdatedAt.IsZero() {
-		bus.UpdatedAt = now
-	} else if bus.UpdatedAt.Before(existingBus.UpdatedAt) {
-		err := InvalidParameterError{
-			Name:  "updated_at",
-			Value: bus.UpdatedAt,
-		}
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"updated_at":          bus.UpdatedAt,
-			"existing_updated_at": existingBus.UpdatedAt,
-		}).Error("cannot specify update time before current update time")
-		return model.Bus{}, err
-	} else if bus.UpdatedAt.After(now) {
-		err := InvalidParameterError{
-			Name:  "updated_at",
-			Value: bus.UpdatedAt,
-		}
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"updated_at": bus.UpdatedAt,
-		}).Error("cannot specify update time in the future")
-		return model.Bus{}, err
-	}
-
-	if bus.Latitude == 0 {
-		bus.Latitude = existingBus.Latitude
-	}
-
-	if bus.Longitude == 0 {
-		bus.Longitude = existingBus.Longitude
-	}
-
-	res, err := db.conn.Exec("UPDATE buses SET latitude = $2, longitude = $3, updated_at = $4 WHERE id = $1", id, bus.Latitude, bus.Longitude, bus.UpdatedAt)
+func (src postgresSource) UpdateBus(bus model.Bus) error {
+	res, err := src.updateStmt.Exec(bus.ID, bus.Latitude, bus.Longitude, bus.UpdatedAt)
 	if err != nil {
 		logrus.WithError(err).Error("error updating bus")
-		return model.Bus{}, err
+		return err
 	}
 
 	nRows, err := res.RowsAffected()
 	if err != nil {
-		logrus.WithError(err).Warn("could not get number of affected rows")
+		logrus.WithError(err).Error("could not get number of affected rows")
+		return err
 	}
-	if expected := int64(1); nRows != expected {
+	if nRows == 0 {
 		logrus.WithFields(logrus.Fields{
-			"actual_rows":   nRows,
-			"expected_rows": expected,
-		}).Warn("unexpected number of affected rows")
+			"affected_rows": nRows,
+		}).Error("no rows were updated")
+		return ErrNoSuchRow
+	}
+	if nRows > 1 {
+		logrus.WithFields(logrus.Fields{
+			"affected_rows": nRows,
+		}).Error("more rows than expected were updated")
+		return errors.New("xxx")
 	}
 
-	bus.ID = id
+	return nil
+}
 
-	return bus, nil
+func (src postgresSource) Close() error {
+	if err := src.insertStmt.Close(); err != nil {
+		return err
+	}
+
+	if err := src.selectAllStmt.Close(); err != nil {
+		return err
+	}
+
+	if err := src.selectStmt.Close(); err != nil {
+		return err
+	}
+
+	if err := src.updateStmt.Close(); err != nil {
+		return err
+	}
+
+	if err := src.deleteStmt.Close(); err != nil {
+		return err
+	}
+
+	if err := src.db.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }

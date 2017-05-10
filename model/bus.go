@@ -8,6 +8,6 @@ type Bus struct {
 	ID        string
 	Latitude  float64
 	Longitude float64
-	UpdatedAt time.Time
-	CreatedAt time.Time
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }

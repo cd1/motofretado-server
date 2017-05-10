@@ -1,6 +1,18 @@
 package data
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// ErrNoSuchRow represents an error when some data entry could not be found.
+var ErrNoSuchRow = errors.New("no such row")
+
+// DuplicateError represents an error when an operation could not be performed
+// because that row already exists.
+type DuplicateError struct {
+	ID string
+}
 
 // InvalidParameterError represents an error due to an invalid parameter
 // being specified.
@@ -22,4 +34,9 @@ func (e InvalidParameterError) Error() string {
 // Error returns a string representation of the error.
 func (e MissingParameterError) Error() string {
 	return fmt.Sprintf("missing parameter \"%v\"", e.Name)
+}
+
+// Error returns a string representation of the error.
+func (e DuplicateError) Error() string {
+	return fmt.Sprintf("row with ID=\"%v\" already exists", e.ID)
 }

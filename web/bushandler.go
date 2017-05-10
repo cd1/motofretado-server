@@ -1,7 +1,6 @@
 package web
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,7 +15,7 @@ import (
 // BusHandler handles the HTTP requests on the bus resource. It is responsible
 // for listing detailed information, updating and deleting individual buses.
 type BusHandler struct {
-	DB data.DB
+	repo *data.Repository
 }
 
 // use "doDelete" instead of "delete" to avoid shadowing the builtin function "delete"
@@ -34,36 +33,23 @@ func (h BusHandler) doDelete(w http.ResponseWriter, req *http.Request, params ht
 		return
 	}
 
-	exists, err := h.DB.ExistsBus(id)
-	if err != nil {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error
-			Title:  "Unexpected error",
-			Detail: err.Error(),
-		})
-
-		return
-	}
-
-	if !exists {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
-			Title:  "Bus ID not found",
-			Detail: fmt.Sprintf("Bus \"%v\" doesn't exist", id),
-			Source: &jsonapi.ErrorSource{
-				Pointer: "/data/id",
-			},
-		})
-
-		return
-	}
-
-	if err = h.DB.DeleteBus(id); err != nil {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error
-			Title:  "Unexpected error",
-			Detail: err.Error(),
-		})
+	if err := h.repo.DeleteBus(id); err != nil {
+		if err == data.ErrNoSuchRow {
+			errorResponse(w, jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
+				Title:  "Bus ID not found",
+				Detail: fmt.Sprintf("Bus \"%v\" doesn't exist", id),
+				Source: &jsonapi.ErrorSource{
+					Pointer: "/data/id",
+				},
+			})
+		} else {
+			errorResponse(w, jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error
+				Title:  "Unexpected error",
+				Detail: err.Error(),
+			})
+		}
 
 		return
 	}
@@ -91,37 +77,24 @@ func (h BusHandler) get(w http.ResponseWriter, req *http.Request, params httprou
 		return
 	}
 
-	exists, err := h.DB.ExistsBus(id)
+	bus, err := h.repo.ReadBus(id)
 	if err != nil {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error
-			Title:  "Unexpected error",
-			Detail: err.Error(),
-		})
-
-		return
-	}
-
-	if !exists {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
-			Title:  "Bus ID not found",
-			Detail: fmt.Sprintf("Bus \"%v\" doesn't exist", id),
-			Source: &jsonapi.ErrorSource{
-				Pointer: "/data/id",
-			},
-		})
-
-		return
-	}
-
-	bus, err := h.DB.ReadBus(id)
-	if err != nil {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error
-			Title:  "Unexpected error",
-			Detail: err.Error(),
-		})
+		if err == data.ErrNoSuchRow {
+			errorResponse(w, jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
+				Title:  "Bus ID not found",
+				Detail: fmt.Sprintf("Bus \"%v\" doesn't exist", id),
+				Source: &jsonapi.ErrorSource{
+					Pointer: "/data/id",
+				},
+			})
+		} else {
+			errorResponse(w, jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error
+				Title:  "Unexpected error",
+				Detail: err.Error(),
+			})
+		}
 
 		return
 	}
@@ -155,30 +128,6 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 		errorResponse(w, jsonapi.ErrorData{
 			Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
 			Title:  "Empty bus ID",
-			Source: &jsonapi.ErrorSource{
-				Pointer: "/data/id",
-			},
-		})
-
-		return
-	}
-
-	exists, err := h.DB.ExistsBus(id)
-	if err != nil {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error
-			Title:  "Unexpected error",
-			Detail: err.Error(),
-		})
-
-		return
-	}
-
-	if !exists {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
-			Title:  "Bus ID not found",
-			Detail: fmt.Sprintf("Bus \"%v\" doesn't exist", id),
 			Source: &jsonapi.ErrorSource{
 				Pointer: "/data/id",
 			},
@@ -234,9 +183,9 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 		return
 	}
 
-	updatedBus, err := h.DB.UpdateBus(id, bus)
+	updatedBus, err := h.repo.UpdateBus(bus)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == data.ErrNoSuchRow {
 			errorResponse(w, jsonapi.ErrorData{
 				Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
 				Title:  "Bus ID not found",

@@ -15,7 +15,7 @@ import (
 // BusesHandler handles the HTTP requests on the bus collection. It is
 // responsible for listing all the buses and creating new ones.
 type BusesHandler struct {
-	DB data.DB
+	repo *data.Repository
 }
 
 func (h BusesHandler) get(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
@@ -25,7 +25,7 @@ func (h BusesHandler) get(w http.ResponseWriter, req *http.Request, params httpr
 		return
 	}
 
-	buses, err := h.DB.ReadAllBuses()
+	buses, err := h.repo.ReadAllBuses()
 	if err != nil {
 		errorResponse(w, jsonapi.ErrorData{
 			Status: strconv.Itoa(http.StatusInternalServerError),
@@ -110,45 +110,18 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 		return
 	}
 
-	if bus.ID == "" {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusUnprocessableEntity),
-			Title:  "Missing bus ID",
-			Source: &jsonapi.ErrorSource{
-				Pointer: "/data/id",
-			},
-		})
-
-		return
-	}
-
-	exists, err := h.DB.ExistsBus(bus.ID)
-	if err != nil {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusInternalServerError),
-			Title:  "Unexpected error",
-			Detail: err.Error(),
-		})
-
-		return
-	}
-
-	if exists {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusConflict),
-			Title:  "Existing bus ID",
-			Detail: fmt.Sprintf("Bus \"%v\" already exists", bus.ID),
-			Source: &jsonapi.ErrorSource{
-				Pointer: "/data/id",
-			},
-		})
-
-		return
-	}
-
-	createdBus, err := h.DB.CreateBus(bus)
+	createdBus, err := h.repo.CreateBus(bus)
 	if err != nil {
 		switch err.(type) {
+		case data.DuplicateError:
+			errorResponse(w, jsonapi.ErrorData{
+				Status: strconv.Itoa(http.StatusConflict), // 409 Conflict
+				Title:  "Existing bus ID",
+				Detail: fmt.Sprintf("Bus \"%v\" already exists", bus.ID),
+				Source: &jsonapi.ErrorSource{
+					Pointer: "/data/id",
+				},
+			})
 		case data.InvalidParameterError:
 			errorResponse(w, jsonapi.ErrorData{
 				Status: strconv.Itoa(http.StatusUnprocessableEntity), // 422 Unprocessable Entity

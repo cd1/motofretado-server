@@ -29,17 +29,17 @@ func main() {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	db, err := data.NewPostgresDB(dbURL)
+	repo, err := data.NewPostgresRepository(dbURL)
 	if err != nil {
 		logrus.Fatal("error opening a database connection")
 	}
 	defer func() {
-		if err := db.Close(); err != nil {
+		if err := repo.Close(); err != nil {
 			logrus.WithError(err).Warn("could not close the database connection")
 		}
 	}()
 
-	mux := web.BuildMux(db)
+	mux := web.BuildMux(repo)
 
 	logrus.WithFields(logrus.Fields{
 		"port": port,
