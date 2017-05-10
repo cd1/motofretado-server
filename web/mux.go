@@ -33,7 +33,7 @@ func BuildMux(db data.DB) http.Handler {
 	router.GET("/bus/:id", bus.get)
 	router.HEAD("/bus/:id", bus.get)
 	router.PATCH("/bus/:id", bus.patch)
-	router.DELETE("/bus/:id", bus.delete)
+	router.DELETE("/bus/:id", bus.doDelete)
 
 	router.MethodNotAllowed = http.HandlerFunc(methodNotAllowed)
 	router.NotFound = http.HandlerFunc(notFound)

@@ -19,7 +19,8 @@ type BusHandler struct {
 	DB data.DB
 }
 
-func (h BusHandler) delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+// use "doDelete" instead of "delete" to avoid shadowing the builtin function "delete"
+func (h BusHandler) doDelete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
 	if len(id) == 0 {
 		errorResponse(w, jsonapi.ErrorData{
