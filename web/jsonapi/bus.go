@@ -5,6 +5,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/hashicorp/go-version"
+	"github.com/pkg/errors"
 	"motorola.com/cdeives/motofretado/model"
 )
 
@@ -98,7 +99,7 @@ func validateVersion(api *Root) error {
 				Version:        api.Version,
 				CurrentVersion: CurrentVersion,
 			}
-			return versionErr
+			return errors.Wrap(versionErr, "failed to parse JSONAPI version")
 		}
 
 		if v.GreaterThan(currentVersionStruct) {
@@ -106,7 +107,7 @@ func validateVersion(api *Root) error {
 				Version:        api.Version,
 				CurrentVersion: CurrentVersion,
 			}
-			return versionErr
+			return errors.WithMessage(versionErr, "unsupported JSONAPI version")
 		}
 	}
 
@@ -130,10 +131,11 @@ func toBusData(bus model.Bus) BusData {
 
 func fromBusData(data BusData) (model.Bus, error) {
 	if data.Type != BusType {
-		return model.Bus{}, InvalidTypeError{
+		err := InvalidTypeError{
 			Type:         data.Type,
 			ExpectedType: BusType,
 		}
+		return model.Bus{}, errors.WithMessage(err, "invalid JSONAPI data type")
 	}
 
 	bus := model.Bus{

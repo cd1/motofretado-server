@@ -1,8 +1,9 @@
 package data
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 // ErrNoSuchRow represents an error when some data entry could not be found.

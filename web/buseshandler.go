@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
 	"motorola.com/cdeives/motofretado/data"
 	"motorola.com/cdeives/motofretado/web/jsonapi"
 )
@@ -77,7 +78,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 
 	bus, err := jsonapi.FromBusDocument(busDoc)
 	if err != nil {
-		switch err.(type) {
+		switch errors.Cause(err).(type) {
 		case jsonapi.UnsupportedVersionError:
 			errorResponse(w, jsonapi.ErrorData{
 				Status: strconv.Itoa(http.StatusBadRequest),
@@ -112,7 +113,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 
 	createdBus, err := h.repo.CreateBus(bus)
 	if err != nil {
-		switch err.(type) {
+		switch causeErr := errors.Cause(err); causeErr.(type) {
 		case data.DuplicateError:
 			errorResponse(w, jsonapi.ErrorData{
 				Status: strconv.Itoa(http.StatusConflict), // 409 Conflict
@@ -128,7 +129,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 				Title:  "Invalid bus field",
 				Detail: err.Error(),
 				Source: &jsonapi.ErrorSource{
-					Pointer: "/data/attributes/" + err.(data.InvalidParameterError).Name,
+					Pointer: "/data/attributes/" + causeErr.(data.InvalidParameterError).Name,
 				},
 			})
 		case data.MissingParameterError:
@@ -139,7 +140,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 				Source: &jsonapi.ErrorSource{},
 			}
 
-			missingParameterName := err.(data.MissingParameterError).Name
+			missingParameterName := causeErr.(data.MissingParameterError).Name
 			if missingParameterName == "id" {
 				jsonapiErr.Source.Pointer = "/data/id"
 			} else {

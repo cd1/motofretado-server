@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
 	"motorola.com/cdeives/motofretado/data"
 	"motorola.com/cdeives/motofretado/web/jsonapi"
 )
@@ -34,7 +35,7 @@ func (h BusHandler) doDelete(w http.ResponseWriter, req *http.Request, params ht
 	}
 
 	if err := h.repo.DeleteBus(id); err != nil {
-		if err == data.ErrNoSuchRow {
+		if errors.Cause(err) == data.ErrNoSuchRow {
 			errorResponse(w, jsonapi.ErrorData{
 				Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
 				Title:  "Bus ID not found",
@@ -79,7 +80,7 @@ func (h BusHandler) get(w http.ResponseWriter, req *http.Request, params httprou
 
 	bus, err := h.repo.ReadBus(id)
 	if err != nil {
-		if err == data.ErrNoSuchRow {
+		if errors.Cause(err) == data.ErrNoSuchRow {
 			errorResponse(w, jsonapi.ErrorData{
 				Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
 				Title:  "Bus ID not found",
@@ -150,7 +151,7 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 
 	bus, err := jsonapi.FromBusDocument(busDoc)
 	if err != nil {
-		switch err.(type) {
+		switch errors.Cause(err).(type) {
 		case jsonapi.UnsupportedVersionError:
 			errorResponse(w, jsonapi.ErrorData{
 				Status: strconv.Itoa(http.StatusBadRequest),
@@ -185,7 +186,8 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 
 	updatedBus, err := h.repo.UpdateBus(bus)
 	if err != nil {
-		if err == data.ErrNoSuchRow {
+		causeErr := errors.Cause(err)
+		if causeErr == data.ErrNoSuchRow {
 			errorResponse(w, jsonapi.ErrorData{
 				Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
 				Title:  "Bus ID not found",
@@ -195,7 +197,7 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 				},
 			})
 		} else {
-			switch err.(type) {
+			switch causeErr.(type) {
 			case data.InvalidParameterError:
 				jsonapiErr := jsonapi.ErrorData{
 					Status: strconv.Itoa(http.StatusUnprocessableEntity), // 422 Unprocessable Entity
@@ -204,7 +206,7 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 					Source: &jsonapi.ErrorSource{},
 				}
 
-				invalidParameterName := err.(data.InvalidParameterError).Name
+				invalidParameterName := causeErr.(data.InvalidParameterError).Name
 				if invalidParameterName == "id" {
 					jsonapiErr.Source.Pointer = "/data/id"
 				} else {
@@ -220,7 +222,7 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 					Source: &jsonapi.ErrorSource{},
 				}
 
-				missingParameterName := err.(data.MissingParameterError).Name
+				missingParameterName := causeErr.(data.MissingParameterError).Name
 				if missingParameterName == "id" {
 					jsonapiErr.Source.Pointer = "/data/id"
 				} else {
