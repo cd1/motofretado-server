@@ -1,1 +1,1 @@
-web: motofretado-server -port "$PORT" -db "$DATABASE_URL" -debug
+web: motofretado-server --database-url "$DATABASE_URL" --debug
