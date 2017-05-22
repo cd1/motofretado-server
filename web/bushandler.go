@@ -53,18 +53,18 @@ func (h BusHandler) doDelete(w http.ResponseWriter, req *http.Request, params ht
 }
 
 func (h BusHandler) get(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	if req.Header.Get("Accept") != jsonapi.ContentType {
-		notAcceptable(w) // 406 Not Acceptable
-
-		return
-	}
-
 	id := params.ByName("id")
 	if len(id) == 0 {
 		errorResponse(w, jsonapi.ErrorData{
 			Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
 			Title:  "Empty bus ID",
 		})
+
+		return
+	}
+
+	if req.Header.Get("Accept") != jsonapi.ContentType {
+		notAcceptable(w) // 406 Not Acceptable
 
 		return
 	}
@@ -100,6 +100,16 @@ func (h BusHandler) get(w http.ResponseWriter, req *http.Request, params httprou
 }
 
 func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+	if len(id) == 0 {
+		errorResponse(w, jsonapi.ErrorData{
+			Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
+			Title:  "Empty bus ID",
+		})
+
+		return
+	}
+
 	if req.Header.Get("Accept") != jsonapi.ContentType {
 		notAcceptable(w) // 406 Not Acceptable
 
@@ -108,16 +118,6 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 
 	if req.Header.Get("Content-Type") != jsonapi.ContentType {
 		unsupportedMediaType(w) // 415 Unsupported Media Type
-
-		return
-	}
-
-	id := params.ByName("id")
-	if len(id) == 0 {
-		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
-			Title:  "Empty bus ID",
-		})
 
 		return
 	}
