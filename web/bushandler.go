@@ -154,7 +154,7 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 		switch errors.Cause(err).(type) {
 		case jsonapi.UnsupportedVersionError:
 			errorResponse(w, jsonapi.ErrorData{
-				Status: strconv.Itoa(http.StatusBadRequest),
+				Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
 				Title:  "Unsupported JSONAPI version",
 				Detail: err.Error(),
 				Source: &jsonapi.ErrorSource{
@@ -163,7 +163,7 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 			})
 		case jsonapi.InvalidTypeError:
 			errorResponse(w, jsonapi.ErrorData{
-				Status: strconv.Itoa(http.StatusConflict),
+				Status: strconv.Itoa(http.StatusConflict), // 409 Conflict
 				Title:  "Invalid JSONAPI data type",
 				Detail: err.Error(),
 				Source: &jsonapi.ErrorSource{
@@ -172,7 +172,7 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 			})
 		default:
 			errorResponse(w, jsonapi.ErrorData{
-				Status: strconv.Itoa(http.StatusBadRequest),
+				Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
 				Title:  "Invalid JSONAPI data",
 				Detail: err.Error(),
 				Source: &jsonapi.ErrorSource{

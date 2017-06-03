@@ -21,7 +21,7 @@ type BusesHandler struct {
 
 func (h BusesHandler) get(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	if req.Header.Get("Accept") != jsonapi.ContentType {
-		notAcceptable(w)
+		notAcceptable(w) // 406 Not Acceptable
 
 		return
 	}
@@ -29,7 +29,7 @@ func (h BusesHandler) get(w http.ResponseWriter, req *http.Request, params httpr
 	buses, err := h.repo.ReadAllBuses()
 	if err != nil {
 		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusInternalServerError),
+			Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error
 			Title:  "Unexpected error",
 			Detail: err.Error(),
 		})
@@ -46,20 +46,20 @@ func (h BusesHandler) get(w http.ResponseWriter, req *http.Request, params httpr
 	}
 
 	w.Header().Set("Content-Type", jsonapi.ContentType)
-	if err := json.NewEncoder(w).Encode(busesDoc); err != nil {
+	if err := json.NewEncoder(w).Encode(busesDoc); err != nil { // 200 OK
 		logrus.WithError(err).Error("could not encode buses to JSON")
 	}
 }
 
 func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	if req.Header.Get("Accept") != jsonapi.ContentType {
-		notAcceptable(w)
+		notAcceptable(w) // 406 Not Acceptable
 
 		return
 	}
 
 	if req.Header.Get("Content-Type") != jsonapi.ContentType {
-		unsupportedMediaType(w)
+		unsupportedMediaType(w) // 415 Unsupported Media Type
 
 		return
 	}
@@ -68,7 +68,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 
 	if err := json.NewDecoder(req.Body).Decode(&busDoc); err != nil {
 		errorResponse(w, jsonapi.ErrorData{
-			Status: strconv.Itoa(http.StatusBadRequest),
+			Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
 			Title:  "Invalid JSON format",
 			Detail: err.Error(),
 		})
@@ -81,7 +81,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 		switch errors.Cause(err).(type) {
 		case jsonapi.UnsupportedVersionError:
 			errorResponse(w, jsonapi.ErrorData{
-				Status: strconv.Itoa(http.StatusBadRequest),
+				Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
 				Title:  "Unsupported JSONAPI version",
 				Detail: err.Error(),
 				Source: &jsonapi.ErrorSource{
@@ -90,7 +90,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 			})
 		case jsonapi.InvalidTypeError:
 			errorResponse(w, jsonapi.ErrorData{
-				Status: strconv.Itoa(http.StatusConflict),
+				Status: strconv.Itoa(http.StatusConflict), // 409 Conflict
 				Title:  "Invalid JSONAPI data type",
 				Detail: err.Error(),
 				Source: &jsonapi.ErrorSource{
@@ -99,7 +99,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 			})
 		default:
 			errorResponse(w, jsonapi.ErrorData{
-				Status: strconv.Itoa(http.StatusBadRequest),
+				Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
 				Title:  "Invalid JSONAPI data",
 				Detail: err.Error(),
 				Source: &jsonapi.ErrorSource{
@@ -167,7 +167,7 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 
 	w.Header().Set("Content-Type", jsonapi.ContentType)
 	w.Header().Set("Location", selfURL)
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusCreated) // 201 Created
 	if err := json.NewEncoder(w).Encode(createdBusDoc); err != nil {
 		logrus.WithError(err).Error("could not encode bus to JSON")
 	}
