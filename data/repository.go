@@ -5,14 +5,13 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
-	"motorola.com/cdeives/motofretado/model"
 )
 
 type Repository struct {
 	src Source
 }
 
-func (r Repository) CreateBus(bus model.Bus) (model.Bus, error) {
+func (r Repository) CreateBus(bus Bus) (Bus, error) {
 	logrus.WithFields(logrus.Fields{
 		"id":         bus.ID,
 		"latitude":   bus.Latitude,
@@ -21,7 +20,7 @@ func (r Repository) CreateBus(bus model.Bus) (model.Bus, error) {
 		"updated_at": bus.UpdatedAt,
 	}).Debug("creating bus")
 	if len(bus.ID) == 0 {
-		return model.Bus{}, errors.WithMessage(MissingParameterError{"id"}, "missing bus ID")
+		return Bus{}, errors.WithMessage(MissingParameterError{"id"}, "missing bus ID")
 	}
 
 	if !bus.CreatedAt.IsZero() {
@@ -29,7 +28,7 @@ func (r Repository) CreateBus(bus model.Bus) (model.Bus, error) {
 			Name:  "created_at",
 			Value: bus.CreatedAt,
 		}
-		return model.Bus{}, errors.WithMessage(err, "bus creation time cannot be specified")
+		return Bus{}, errors.WithMessage(err, "bus creation time cannot be specified")
 	}
 
 	if !bus.UpdatedAt.IsZero() {
@@ -37,7 +36,7 @@ func (r Repository) CreateBus(bus model.Bus) (model.Bus, error) {
 			Name:  "updated_at",
 			Value: bus.UpdatedAt,
 		}
-		return model.Bus{}, errors.WithMessage(err, "bus update time cannot be specified")
+		return Bus{}, errors.WithMessage(err, "bus update time cannot be specified")
 	}
 
 	now := time.Now()
@@ -45,29 +44,29 @@ func (r Repository) CreateBus(bus model.Bus) (model.Bus, error) {
 	bus.UpdatedAt = now
 
 	if err := r.src.CreateBus(bus); err != nil {
-		return model.Bus{}, err
+		return Bus{}, err
 	}
 
 	return bus, nil
 }
 
-func (r Repository) ReadAllBuses() ([]model.Bus, error) {
+func (r Repository) ReadAllBuses() ([]Bus, error) {
 	logrus.Debug("reading all buses")
 	return r.src.ReadAllBuses()
 }
 
-func (r Repository) ReadBus(id string) (model.Bus, error) {
+func (r Repository) ReadBus(id string) (Bus, error) {
 	logrus.WithFields(logrus.Fields{
 		"id": id,
 	}).Debug("reading bus")
 	if len(id) == 0 {
-		return model.Bus{}, errors.WithMessage(MissingParameterError{"id"}, "missing bus ID")
+		return Bus{}, errors.WithMessage(MissingParameterError{"id"}, "missing bus ID")
 	}
 
 	return r.src.ReadBus(id)
 }
 
-func (r Repository) UpdateBus(bus model.Bus) (model.Bus, error) {
+func (r Repository) UpdateBus(bus Bus) (Bus, error) {
 	logrus.WithFields(logrus.Fields{
 		"id":         bus.ID,
 		"latitude":   bus.Latitude,
@@ -76,12 +75,12 @@ func (r Repository) UpdateBus(bus model.Bus) (model.Bus, error) {
 		"updated_at": bus.UpdatedAt,
 	}).Debug("updating bus")
 	if len(bus.ID) == 0 {
-		return model.Bus{}, errors.WithMessage(MissingParameterError{"id"}, "missing bus ID")
+		return Bus{}, errors.WithMessage(MissingParameterError{"id"}, "missing bus ID")
 	}
 
 	existingBus, err := r.src.ReadBus(bus.ID)
 	if err != nil {
-		return model.Bus{}, errors.Wrap(err, "failed to check existing bus")
+		return Bus{}, errors.Wrap(err, "failed to check existing bus")
 	}
 
 	if !bus.CreatedAt.IsZero() {
@@ -90,7 +89,7 @@ func (r Repository) UpdateBus(bus model.Bus) (model.Bus, error) {
 				Name:  "created_at",
 				Value: bus.CreatedAt,
 			}
-			return model.Bus{}, errors.WithMessage(err, "bus creation time cannot be specified")
+			return Bus{}, errors.WithMessage(err, "bus creation time cannot be specified")
 		}
 	} else {
 		bus.CreatedAt = existingBus.CreatedAt
@@ -101,12 +100,12 @@ func (r Repository) UpdateBus(bus model.Bus) (model.Bus, error) {
 			Name:  "updated_at",
 			Value: bus.UpdatedAt,
 		}
-		return model.Bus{}, errors.WithMessage(err, "bus update time cannot be specified")
+		return Bus{}, errors.WithMessage(err, "bus update time cannot be specified")
 	}
 	bus.UpdatedAt = time.Now()
 
 	if err := r.src.UpdateBus(bus); err != nil {
-		return model.Bus{}, err
+		return Bus{}, err
 	}
 
 	return bus, nil

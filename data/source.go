@@ -1,12 +1,10 @@
 package data
 
-import "motorola.com/cdeives/motofretado/model"
-
 type Source interface {
-	CreateBus(model.Bus) error
-	ReadAllBuses() ([]model.Bus, error)
-	ReadBus(string) (model.Bus, error)
-	UpdateBus(model.Bus) error
+	CreateBus(Bus) error
+	ReadAllBuses() ([]Bus, error)
+	ReadBus(string) (Bus, error)
+	UpdateBus(Bus) error
 	DeleteBus(string) error
 
 	Close() error

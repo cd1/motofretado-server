@@ -7,7 +7,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
-	"motorola.com/cdeives/motofretado/model"
 )
 
 type postgresSource struct {
@@ -68,7 +67,7 @@ func NewPostgresRepository(url string) (*Repository, error) {
 	return &Repository{src: src}, nil
 }
 
-func (src postgresSource) CreateBus(bus model.Bus) error {
+func (src postgresSource) CreateBus(bus Bus) error {
 	res, err := src.insertStmt.Exec(bus.ID, bus.Latitude, bus.Longitude, bus.CreatedAt, bus.UpdatedAt)
 	if err != nil {
 		if err.(*pq.Error).Code == "23505" { // unique_violation
@@ -108,8 +107,8 @@ func (src postgresSource) DeleteBus(id string) error {
 	return nil
 }
 
-func (src postgresSource) ReadAllBuses() ([]model.Bus, error) {
-	var buses []model.Bus
+func (src postgresSource) ReadAllBuses() ([]Bus, error) {
+	var buses []Bus
 
 	if err := src.selectAllStmt.Select(&buses); err != nil {
 		return nil, errors.Wrap(err, "failed to read all buses")
@@ -118,21 +117,21 @@ func (src postgresSource) ReadAllBuses() ([]model.Bus, error) {
 	return buses, nil
 }
 
-func (src postgresSource) ReadBus(id string) (model.Bus, error) {
-	bus := model.Bus{ID: id}
+func (src postgresSource) ReadBus(id string) (Bus, error) {
+	bus := Bus{ID: id}
 
 	if err := src.selectStmt.Get(&bus, id); err != nil {
 		if err == sql.ErrNoRows {
-			return model.Bus{}, errors.WithMessage(ErrNoSuchRow, "bus not found")
+			return Bus{}, errors.WithMessage(ErrNoSuchRow, "bus not found")
 		}
 
-		return model.Bus{}, errors.Wrap(err, "error reading bus")
+		return Bus{}, errors.Wrap(err, "error reading bus")
 	}
 
 	return bus, nil
 }
 
-func (src postgresSource) UpdateBus(bus model.Bus) error {
+func (src postgresSource) UpdateBus(bus Bus) error {
 	res, err := src.updateStmt.Exec(bus.ID, bus.Latitude, bus.Longitude, bus.UpdatedAt)
 	if err != nil {
 		return errors.Wrap(err, "error updating bus")

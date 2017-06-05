@@ -6,7 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
-	"motorola.com/cdeives/motofretado/model"
+	"motorola.com/cdeives/motofretado/data"
 )
 
 const BusType = "bus"
@@ -37,7 +37,7 @@ type BusAttributes struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func ToBusDocument(bus model.Bus) BusDocument {
+func ToBusDocument(bus data.Bus) BusDocument {
 	doc := BusDocument{
 		JSONAPI: &Root{
 			Version: CurrentVersion,
@@ -48,7 +48,7 @@ func ToBusDocument(bus model.Bus) BusDocument {
 	return doc
 }
 
-func ToBusesDocument(buses []model.Bus) BusesDocument {
+func ToBusesDocument(buses []data.Bus) BusesDocument {
 	doc := BusesDocument{
 		JSONAPI: &Root{
 			Version: CurrentVersion,
@@ -63,20 +63,20 @@ func ToBusesDocument(buses []model.Bus) BusesDocument {
 	return doc
 }
 
-func FromBusDocument(doc BusDocument) (model.Bus, error) {
+func FromBusDocument(doc BusDocument) (data.Bus, error) {
 	if err := validateVersion(doc.JSONAPI); err != nil {
-		return model.Bus{}, err
+		return data.Bus{}, err
 	}
 
 	return fromBusData(doc.Data)
 }
 
-func FromBusesDocument(doc BusesDocument) ([]model.Bus, error) {
+func FromBusesDocument(doc BusesDocument) ([]data.Bus, error) {
 	if err := validateVersion(doc.JSONAPI); err != nil {
 		return nil, err
 	}
 
-	buses := make([]model.Bus, len(doc.Data))
+	buses := make([]data.Bus, len(doc.Data))
 
 	for i, d := range doc.Data {
 		bus, err := fromBusData(d)
@@ -114,8 +114,8 @@ func validateVersion(api *Root) error {
 	return nil
 }
 
-func toBusData(bus model.Bus) BusData {
-	data := BusData{
+func toBusData(bus data.Bus) BusData {
+	busData := BusData{
 		Type: BusType,
 		ID:   bus.ID,
 		Attributes: &BusAttributes{
@@ -126,27 +126,27 @@ func toBusData(bus model.Bus) BusData {
 		},
 	}
 
-	return data
+	return busData
 }
 
-func fromBusData(data BusData) (model.Bus, error) {
-	if data.Type != BusType {
+func fromBusData(busData BusData) (data.Bus, error) {
+	if busData.Type != BusType {
 		err := InvalidTypeError{
-			Type:         data.Type,
+			Type:         busData.Type,
 			ExpectedType: BusType,
 		}
-		return model.Bus{}, errors.WithMessage(err, "invalid JSONAPI data type")
+		return data.Bus{}, errors.WithMessage(err, "invalid JSONAPI busData type")
 	}
 
-	bus := model.Bus{
-		ID: data.ID,
+	bus := data.Bus{
+		ID: busData.ID,
 	}
 
-	if data.Attributes != nil {
-		bus.Latitude = data.Attributes.Latitude
-		bus.Longitude = data.Attributes.Longitude
-		bus.CreatedAt = data.Attributes.CreatedAt
-		bus.UpdatedAt = data.Attributes.UpdatedAt
+	if busData.Attributes != nil {
+		bus.Latitude = busData.Attributes.Latitude
+		bus.Longitude = busData.Attributes.Longitude
+		bus.CreatedAt = busData.Attributes.CreatedAt
+		bus.UpdatedAt = busData.Attributes.UpdatedAt
 	}
 
 	return bus, nil
