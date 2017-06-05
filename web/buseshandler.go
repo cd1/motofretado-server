@@ -7,10 +7,10 @@ import (
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/cd1/motofretado-server/data"
+	"github.com/cd1/motofretado-server/web/jsonapi"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
-	"motorola.com/cdeives/motofretado/data"
-	"motorola.com/cdeives/motofretado/web/jsonapi"
 )
 
 // BusesHandler handles the HTTP requests on the bus collection. It is

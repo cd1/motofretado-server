@@ -8,11 +8,11 @@ import (
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/cd1/motofretado-server/data"
+	"github.com/cd1/motofretado-server/web/jsonapi"
 	"github.com/gorilla/handlers"
 	"github.com/julienschmidt/httprouter"
 	"github.com/urfave/negroni"
-	"motorola.com/cdeives/motofretado/data"
-	"motorola.com/cdeives/motofretado/web/jsonapi"
 )
 
 var logOutput = os.Stderr

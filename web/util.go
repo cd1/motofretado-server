@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"motorola.com/cdeives/motofretado/web/jsonapi"
+	"github.com/cd1/motofretado-server/web/jsonapi"
 )
 
 func notAcceptable(w http.ResponseWriter) {

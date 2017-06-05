@@ -75,7 +75,7 @@
 			"revisionTime": "2017-05-12T22:21:14Z"
 		}
 	],
-	"rootPath": "motorola.com/cdeives/motofretado",
+	"rootPath": "github.com/cd1/motofretado-server",
     "heroku": {
         "install": ["./cmd/motofretado-server"]
     }

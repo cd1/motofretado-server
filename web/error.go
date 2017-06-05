@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
-	"motorola.com/cdeives/motofretado/web/jsonapi"
+	"github.com/cd1/motofretado-server/web/jsonapi"
 )
 
 func errorResponse(w http.ResponseWriter, e jsonapi.ErrorData) {

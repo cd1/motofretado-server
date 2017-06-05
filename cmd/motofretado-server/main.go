@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/cd1/motofretado-server/data"
+	"github.com/cd1/motofretado-server/web"
 	"github.com/urfave/cli"
-	"motorola.com/cdeives/motofretado/data"
-	"motorola.com/cdeives/motofretado/web"
 )
 
 func main() {

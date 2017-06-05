@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/cd1/motofretado-server/data"
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
-	"motorola.com/cdeives/motofretado/data"
 )
 
 const BusType = "bus"
