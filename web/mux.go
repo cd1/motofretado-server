@@ -22,13 +22,17 @@ var logOutput = os.Stderr
 func BuildMux(repo *data.Repository) http.Handler {
 	router := httprouter.New()
 
-	logrus.Debug("registering HTTP handler /bus")
+	logrus.WithFields(logrus.Fields{
+		"path": "/bus",
+	}).Debug("registering HTTP handler")
 	buses := BusesHandler{repo: repo}
 	router.GET("/bus", buses.get)
 	router.HEAD("/bus", buses.get)
 	router.POST("/bus", buses.post)
 
-	logrus.Debug("registering HTTP handler /bus/:id")
+	logrus.WithFields(logrus.Fields{
+		"path": "/bus/:id",
+	}).Debug("registering HTTP handler")
 	bus := BusHandler{repo: repo}
 	router.GET("/bus/:id", bus.get)
 	router.HEAD("/bus/:id", bus.get)

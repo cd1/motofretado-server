@@ -15,15 +15,20 @@ func errorResponse(w http.ResponseWriter, e jsonapi.ErrorData) {
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"status": e.Status,
-		}).Error("invalid HTTP error status; using 500 Internal Server Error")
+		}).Warn("invalid HTTP error status; using 500 Internal Server Error")
 		statusInt = http.StatusInternalServerError
 	}
 
-	logrus.WithFields(logrus.Fields{
+	logFields := logrus.WithFields(logrus.Fields{
 		"status": fmt.Sprintf("%v %v", e.Status, http.StatusText(statusInt)),
 		"title":  e.Title,
 		"detail": e.Detail,
-	}).Error("HTTP error")
+	})
+	if statusInt < http.StatusInternalServerError {
+		logFields.Info("HTTP error")
+	} else {
+		logFields.Error("HTTP error")
+	}
 
 	doc := jsonapi.ErrorsDocument{
 		JSONAPI: &jsonapi.Root{
@@ -35,6 +40,6 @@ func errorResponse(w http.ResponseWriter, e jsonapi.ErrorData) {
 	w.Header().Set("Content-Type", jsonapi.ContentType)
 	w.WriteHeader(statusInt)
 	if err := json.NewEncoder(w).Encode(doc); err != nil {
-		logrus.WithError(err).Error("error encoding Errors to JSON")
+		logrus.WithError(err).Warn("error encoding Errors to JSON")
 	}
 }

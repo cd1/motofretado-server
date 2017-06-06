@@ -94,7 +94,7 @@ func validateVersion(api *Root) error {
 	if api != nil && len(api.Version) > 0 {
 		v, err := version.NewVersion(api.Version)
 		if err != nil {
-			logrus.WithError(err).Error("failed to parse JSONAPI version")
+			logrus.WithError(err).Info("failed to parse JSONAPI version")
 			versionErr := UnsupportedVersionError{
 				Version:        api.Version,
 				CurrentVersion: CurrentVersion,
