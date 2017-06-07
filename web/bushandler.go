@@ -26,9 +26,6 @@ func (h BusHandler) doDelete(w http.ResponseWriter, req *http.Request, params ht
 		errorResponse(w, jsonapi.ErrorData{
 			Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
 			Title:  "Empty bus ID",
-			Source: &jsonapi.ErrorSource{
-				Pointer: "/data/id",
-			},
 		})
 
 		return
@@ -40,9 +37,6 @@ func (h BusHandler) doDelete(w http.ResponseWriter, req *http.Request, params ht
 				Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
 				Title:  "Bus ID not found",
 				Detail: fmt.Sprintf("Bus \"%v\" doesn't exist", id),
-				Source: &jsonapi.ErrorSource{
-					Pointer: "/data/id",
-				},
 			})
 		} else {
 			errorResponse(w, jsonapi.ErrorData{
@@ -70,9 +64,6 @@ func (h BusHandler) get(w http.ResponseWriter, req *http.Request, params httprou
 		errorResponse(w, jsonapi.ErrorData{
 			Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
 			Title:  "Empty bus ID",
-			Source: &jsonapi.ErrorSource{
-				Pointer: "/data/id",
-			},
 		})
 
 		return
@@ -85,9 +76,6 @@ func (h BusHandler) get(w http.ResponseWriter, req *http.Request, params httprou
 				Status: strconv.Itoa(http.StatusNotFound), // 404 Not Found
 				Title:  "Bus ID not found",
 				Detail: fmt.Sprintf("Bus \"%v\" doesn't exist", id),
-				Source: &jsonapi.ErrorSource{
-					Pointer: "/data/id",
-				},
 			})
 		} else {
 			errorResponse(w, jsonapi.ErrorData{
@@ -129,9 +117,6 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 		errorResponse(w, jsonapi.ErrorData{
 			Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
 			Title:  "Empty bus ID",
-			Source: &jsonapi.ErrorSource{
-				Pointer: "/data/id",
-			},
 		})
 
 		return
@@ -199,37 +184,14 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 		} else {
 			switch causeErr.(type) {
 			case data.InvalidParameterError:
-				jsonapiErr := jsonapi.ErrorData{
+				errorResponse(w, jsonapi.ErrorData{
 					Status: strconv.Itoa(http.StatusUnprocessableEntity), // 422 Unprocessable Entity
 					Title:  "Invalid bus field",
 					Detail: err.Error(),
-					Source: &jsonapi.ErrorSource{},
-				}
-
-				invalidParameterName := causeErr.(data.InvalidParameterError).Name
-				if invalidParameterName == "id" {
-					jsonapiErr.Source.Pointer = "/data/id"
-				} else {
-					jsonapiErr.Source.Pointer = "/data/attributes/" + invalidParameterName
-				}
-
-				errorResponse(w, jsonapiErr)
-			case data.MissingParameterError:
-				jsonapiErr := jsonapi.ErrorData{
-					Status: strconv.Itoa(http.StatusUnprocessableEntity), // 422 Unprocessable Entity
-					Title:  "Missing bus field",
-					Detail: err.Error(),
-					Source: &jsonapi.ErrorSource{},
-				}
-
-				missingParameterName := causeErr.(data.MissingParameterError).Name
-				if missingParameterName == "id" {
-					jsonapiErr.Source.Pointer = "/data/id"
-				} else {
-					jsonapiErr.Source.Pointer = "/data/attributes/" + missingParameterName
-				}
-
-				errorResponse(w, jsonapiErr)
+					Source: &jsonapi.ErrorSource{
+						Pointer:"/data/attributes/" + causeErr.(data.InvalidParameterError).Name,
+					},
+				})
 			default:
 				errorResponse(w, jsonapi.ErrorData{
 					Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error

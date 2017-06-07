@@ -133,21 +133,14 @@ func (h BusesHandler) post(w http.ResponseWriter, req *http.Request, params http
 				},
 			})
 		case data.MissingParameterError:
-			jsonapiErr := jsonapi.ErrorData{
+			errorResponse(w, jsonapi.ErrorData{
 				Status: strconv.Itoa(http.StatusUnprocessableEntity), // 422 Unprocessable Entity
 				Title:  "Missing bus field",
 				Detail: err.Error(),
-				Source: &jsonapi.ErrorSource{},
-			}
-
-			missingParameterName := causeErr.(data.MissingParameterError).Name
-			if missingParameterName == "id" {
-				jsonapiErr.Source.Pointer = "/data/id"
-			} else {
-				jsonapiErr.Source.Pointer = "/data/attributes/" + missingParameterName
-			}
-
-			errorResponse(w, jsonapiErr)
+				Source: &jsonapi.ErrorSource{
+					Pointer: "/data/attributes/" + causeErr.(data.MissingParameterError).Name,
+				},
+			})
 		default:
 			errorResponse(w, jsonapi.ErrorData{
 				Status: strconv.Itoa(http.StatusInternalServerError), // 500 Internal Server Error
