@@ -169,6 +169,20 @@ func (h BusHandler) patch(w http.ResponseWriter, req *http.Request, params httpr
 		return
 	}
 
+	if id != bus.ID {
+		errorResponse(w, jsonapi.ErrorData{
+			Status: strconv.Itoa(http.StatusBadRequest), // 400 Bad Request
+			Title:  "Incompatible bus IDs",
+			Detail: fmt.Sprintf("Bus ID \"%v\" from URL doesn't match bus ID \"%v\" from JSONAPI data",
+				id, bus.ID),
+			Source: &jsonapi.ErrorSource{
+				Pointer: "/data/id",
+			},
+		})
+
+		return
+	}
+
 	updatedBus, err := h.repo.UpdateBus(bus)
 	if err != nil {
 		causeErr := errors.Cause(err)
