@@ -19,7 +19,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "Moto Fretado server"
 	app.Usage = "The web server behind the Moto Fretado app"
-	app.Version = "0.6.0-dev"
+	app.Version = "0.6.0"
 	app.Authors = []cli.Author{
 		{
 			Name:  "Crístian Deives",
